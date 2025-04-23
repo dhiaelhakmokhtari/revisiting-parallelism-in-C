@@ -1,0 +1,42 @@
+#include <mpi.h>
+#include <stdio.h>
+
+#define CHUNK 2
+
+int main(int argc, char **argv) {
+    int rank, size;
+    int sendbuf[CHUNK];         // Local data for each process
+    int recvbuf[CHUNK * 4];     // Only root will use this (4 processes × 2)
+
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (size != 4) {
+        if (rank == 0)
+            printf("Run this with exactly 4 processes.\n");
+        MPI_Finalize();
+        return 1;
+    }
+
+    sendbuf[0] = rank * 10 + 1;
+    sendbuf[1] = rank * 10 + 2;
+
+    printf("Process %d sending: %d %d\n", rank, sendbuf[0], sendbuf[1]);
+
+    MPI_Gather(sendbuf, CHUNK, MPI_INT,
+               recvbuf, CHUNK, MPI_INT,
+               0, MPI_COMM_WORLD);
+
+    if (rank == 0) {
+        printf("Root gathered: ");
+        for (int i = 0; i < CHUNK * size; i++) {
+            printf("%d ", recvbuf[i]);
+        }
+        printf("\n");
+    }
+
+    MPI_Finalize();
+    return 0;
+}
+
